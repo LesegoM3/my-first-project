@@ -1,15 +1,37 @@
 from flask import Flask, jsonify, request
 from datetime import datetime, timezone
+import hashlib
+import hmac
+import secrets
 import sqlite3
 
 app = Flask(__name__)
 DB_PATH = 'cybersec_lab.db'
+SESSION_TTL_SECONDS = 3600
+sessions = {}
 
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def hash_password(password, salt=None):
+    salt = salt or secrets.token_bytes(16)
+    derived = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 200_000)
+    return salt.hex() + ':' + derived.hex()
+
+
+def verify_password(password, stored):
+    try:
+        salt_hex, digest_hex = stored.split(':', 1)
+        salt = bytes.fromhex(salt_hex)
+        expected = bytes.fromhex(digest_hex)
+        actual = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 200_000)
+        return hmac.compare_digest(actual, expected)
+    except (ValueError, TypeError):
+        return False
 
 
 def init_db():
@@ -22,7 +44,32 @@ def init_db():
                 created_at TEXT NOT NULL
             )
         ''')
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        ''')
+        user = conn.execute('SELECT id FROM users WHERE username = ?', ('lab-admin',)).fetchone()
+        if not user:
+            conn.execute(
+                'INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)',
+                ('lab-admin', hash_password('training-only'), datetime.now(timezone.utc).isoformat())
+            )
         conn.commit()
+
+
+def log_event(event_type, severity='LOW'):
+    timestamp = datetime.now(timezone.utc).isoformat()
+    with get_db() as conn:
+        cursor = conn.execute(
+            'INSERT INTO security_events (event_type, severity, created_at) VALUES (?, ?, ?)',
+            (event_type[:50], severity if severity in {'LOW', 'MEDIUM', 'HIGH'} else 'LOW', timestamp)
+        )
+        conn.commit()
+        return cursor.lastrowid
 
 
 @app.get('/api/health')
@@ -35,9 +82,7 @@ def get_events():
     with get_db() as conn:
         rows = conn.execute('''
             SELECT id, event_type AS type, severity, created_at AS timestamp
-            FROM security_events
-            ORDER BY id DESC
-            LIMIT 50
+            FROM security_events ORDER BY id DESC LIMIT 50
         ''').fetchall()
     return jsonify({'events': [dict(row) for row in rows]})
 
@@ -47,24 +92,47 @@ def create_event():
     data = request.get_json(silent=True) or {}
     event_type = str(data.get('type', 'LAB_TEST'))[:50]
     severity = str(data.get('severity', 'LOW')).upper()[:10]
-    if severity not in {'LOW', 'MEDIUM', 'HIGH'}:
-        severity = 'LOW'
+    event_id = log_event(event_type, severity)
+    return jsonify({'id': event_id, 'type': event_type, 'severity': severity}), 201
 
-    timestamp = datetime.now(timezone.utc).isoformat()
+
+@app.post('/api/login')
+def login():
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', ''))[:100]
+    password = str(data.get('password', ''))[:200]
+
     with get_db() as conn:
-        cursor = conn.execute(
-            'INSERT INTO security_events (event_type, severity, created_at) VALUES (?, ?, ?)',
-            (event_type, severity, timestamp)
-        )
-        conn.commit()
-        event_id = cursor.lastrowid
+        user = conn.execute(
+            'SELECT id, username, password_hash FROM users WHERE username = ?',
+            (username,)
+        ).fetchone()
 
-    return jsonify({
-        'id': event_id,
-        'type': event_type,
-        'severity': severity,
-        'timestamp': timestamp
-    }), 201
+    if not user or not verify_password(password, user['password_hash']):
+        log_event('LOGIN_FAILED', 'MEDIUM')
+        return jsonify({'error': 'Invalid lab credentials'}), 401
+
+    token = secrets.token_urlsafe(32)
+    sessions[token] = {
+        'user_id': user['id'],
+        'username': user['username'],
+        'created': datetime.now(timezone.utc).timestamp()
+    }
+    log_event('LOGIN_SUCCESS', 'LOW')
+    return jsonify({'message': 'Lab login successful', 'token': token, 'expires_in': SESSION_TTL_SECONDS})
+
+
+@app.get('/api/me')
+def me():
+    auth = request.headers.get('Authorization', '')
+    token = auth.removeprefix('Bearer ').strip()
+    session = sessions.get(token)
+    if not session:
+        return jsonify({'error': 'Authentication required'}), 401
+    if datetime.now(timezone.utc).timestamp() - session['created'] > SESSION_TTL_SECONDS:
+        sessions.pop(token, None)
+        return jsonify({'error': 'Session expired'}), 401
+    return jsonify({'authenticated': True, 'username': session['username']})
 
 
 init_db()
