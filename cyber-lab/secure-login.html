@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cybersecurity Lab — Secure Login</title>
+<style>body{font-family:system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;line-height:1.5;background:#081018;color:#e8f1f7}.card{background:#101b25;border:1px solid #29404d;border-radius:12px;padding:24px;margin:18px 0}input{padding:9px;margin-top:5px}button{padding:10px 16px;cursor:pointer}.ok{color:#8ff0b0}.muted{color:#9bb0bb}a{color:#8ed8ff}</style>
+</head>
+<body>
+<h1>🔐 Secure Login Architecture Lab</h1>
+<p class="muted">This page demonstrates the frontend side of a safer design. It intentionally does not perform real authentication.</p>
+<div class="card">
+<h2>Login UI</h2>
+<form id="loginForm">
+<label>Username<br><input id="username" autocomplete="username" required></label><br><br>
+<label>Password<br><input id="password" type="password" autocomplete="current-password" required></label><br><br>
+<button>Sign in</button>
+</form>
+<p id="result"></p>
+</div>
+<div class="card">
+<h2>What changed?</h2>
+<ul>
+<li>No username or password is hardcoded in this page.</li>
+<li>The browser does not decide whether credentials are correct.</li>
+<li>A real application would send credentials over HTTPS to a trusted backend.</li>
+<li>The backend would verify a securely stored password hash and return a controlled authentication result.</li>
+<li>Authorization must also be enforced by the backend, not just hidden UI elements.</li>
+</ul>
+<p><strong>Important:</strong> This is still a static training page. It is not a production authentication system.</p>
+<p><a href="scanner.html">Run the vulnerability scanner</a> · <a href="dashboard.html">Command Center</a></p>
+</div>
+<script>
+document.getElementById('loginForm').addEventListener('submit',function(e){
+ e.preventDefault();
+ document.getElementById('result').className='ok';
+ document.getElementById('result').textContent='Frontend accepted the form for demonstration. No credential verification occurs in the browser.';
+});
+</script>
+</body>
+</html>
