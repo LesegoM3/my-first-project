@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cybersecurity Lab 01</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;line-height:1.5}
+    .card{border:1px solid #ccc;border-radius:12px;padding:24px;margin:18px 0}
+    code{background:#eee;padding:2px 5px;border-radius:4px}
+    .warning{border-left:5px solid #d66;padding-left:15px}
+    button{padding:10px 16px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <h1>🔐 Cybersecurity Lab 01</h1>
+  <p><strong>Web Security Fundamentals</strong></p>
+
+  <div class="card warning">
+    <strong>Training environment</strong>
+    <p>This is a simulated application. Do not enter a real password or any personal information.</p>
+  </div>
+
+  <div class="card">
+    <h2>Simulated Login</h2>
+    <p>This demo intentionally contains clues that a security student should investigate.</p>
+    <form onsubmit="return false">
+      <label>Username<br><input id="username" autocomplete="off"></label><br><br>
+      <label>Password<br><input id="password" type="password" autocomplete="off"></label><br><br>
+      <button onclick="demoLogin()">Sign in</button>
+    </form>
+    <p id="result"></p>
+  </div>
+
+  <div class="card">
+    <h2>Your mission</h2>
+    <ol>
+      <li>Inspect this page and its source.</li>
+      <li>Identify at least three security weaknesses.</li>
+      <li>Explain why each weakness matters.</li>
+      <li>Decide which issue should be fixed first.</li>
+    </ol>
+    <p><strong>Hint:</strong> In real applications, anything delivered to the browser should be considered potentially visible to the user.</p>
+  </div>
+
+  <script>
+    // Intentionally insecure training code. It does NOT contact a server.
+    const demoUsername = 'lab-user';
+    const demoPassword = 'training-only';
+
+    function demoLogin(){
+      const u=document.getElementById('username').value;
+      const p=document.getElementById('password').value;
+      document.getElementById('result').textContent =
+        (u===demoUsername && p===demoPassword)
+          ? 'Demo login accepted. This is only a local simulation.'
+          : 'Demo login rejected.';
+    }
+  </script>
+</body>
+</html>
