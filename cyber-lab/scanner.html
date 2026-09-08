@@ -1,36 +1,39 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CyberSec Lab — Vulnerability Scanner</title>
 <style>
-body{margin:0;background:#080b12;color:#e8edf7;font:15px system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:28px}h1{margin-bottom:6px}.sub{color:#91a0b8}.panel{background:#111827;border:1px solid #263247;border-radius:14px;padding:18px;margin-top:20px}.finding{border-left:4px solid #f59e0b;background:#0c1220;padding:14px;margin:12px 0;border-radius:8px}.high{border-left-color:#ef4444}.medium{border-left-color:#f59e0b}.low{border-left-color:#22c55e}.tag{display:inline-block;padding:3px 8px;border-radius:99px;background:#273449;margin-right:8px;font-size:12px}.ok{color:#86efac}.error{color:#fca5a5}button{border:0;border-radius:9px;padding:11px 16px;background:#2563eb;color:white;font-weight:700;cursor:pointer}pre{white-space:pre-wrap;overflow:auto;background:#070a10;padding:14px;border-radius:8px;color:#b9c6d9}a{color:#7dd3fc}
+body{margin:0;background:#080b12;color:#e8edf7;font:15px system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:28px}h1{margin-bottom:6px}.sub{color:#91a0b8}.panel{background:#111827;border:1px solid #263247;border-radius:14px;padding:18px;margin-top:20px}.finding{border-left:4px solid #f59e0b;background:#0c1220;padding:14px;margin:12px 0;border-radius:8px}.high{border-left-color:#ef4444}.medium{border-left-color:#f59e0b}.pass{border-left-color:#22c55e}.tag{display:inline-block;padding:3px 8px;border-radius:99px;background:#273449;margin-right:8px;font-size:12px}.ok{color:#86efac}.error{color:#fca5a5}button{border:0;border-radius:9px;padding:11px 16px;background:#2563eb;color:white;font-weight:700;cursor:pointer}a{color:#7dd3fc}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:700px){.comparison{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <main>
 <h1>🛡️ Vulnerability Scanner</h1>
-<div class="sub">Lab-only static analysis — scans our intentionally vulnerable training page. No network scanning.</div>
+<div class="sub">Lab-only static analysis. It compares our intentionally vulnerable page with the safer architecture example. No network scanning.</div>
 <div class="panel"><button id="scan">Run Lab Scan</button><span id="status" style="margin-left:12px">Ready</span></div>
-<div id="results" class="panel"><p>Click <b>Run Lab Scan</b> to analyze <code>index.html</code>.</p></div>
-<div class="panel"><b>What we're learning</b><p>This scanner looks for patterns that commonly create security problems. A real production scanner would need much deeper analysis, server-side checks, authenticated testing, safe rate limits and careful authorization.</p><p><a href="dashboard.html">← Back to Command Center</a></p></div>
+<div id="results" class="panel"><p>Click <b>Run Lab Scan</b> to analyze the lab.</p></div>
+<div class="panel"><h2>Vulnerable → Secure</h2><div class="comparison"><div><b>Lab 01</b><p>Credential and authentication logic are present in browser code.</p></div><div><b>Secure architecture</b><p>No credentials or authentication decision are hardcoded in the browser. A real backend must perform verification.</p></div></div></div>
+<div class="panel"><b>What we're learning</b><p>A production scanner needs deeper analysis, server-side checks, authenticated testing, safe rate limits and strict authorization. This lab scanner intentionally stays inside our own static training files.</p><p><a href="secure-login.html">Open secure login lab</a> · <a href="dashboard.html">← Command Center</a></p></div>
 <script>
 const checks=[
- {id:'HARDCODED_CREDENTIAL',title:'Hardcoded credential in client-side code',severity:'HIGH',test:s=>/(password|passwd|pwd)\\s*[:=]\\s*["'][^"']+["']/i.test(s),why:'Secrets placed in browser JavaScript can be discovered by anyone who can view the source or developer tools.',fix:'Never store real passwords, API keys or tokens in frontend code. Verify credentials on a trusted server.'},
- {id:'CLIENT_AUTH',title:'Client-side authentication decision',severity:'HIGH',test:s=>/if\\s*\\(\\s*user(name)?\\s*===|if\\s*\\(.*password.*===/i.test(s),why:'A browser can be modified by the user, so it cannot be trusted to enforce authentication.',fix:'Move authentication and authorization decisions to a server-side component.'},
- {id:'DEMO_WARNING',title:'Training/demo credential disclosure',severity:'MEDIUM',test:s=>/training-only|demo password|demo-password/i.test(s),why:'Even non-production credentials teach us an important lesson: anything shipped to the browser is exposed.',fix:'Keep training secrets clearly fake and ensure they cannot grant access to real systems.'}
+{id:'HARDCODED_CREDENTIAL',title:'Hardcoded credential in client-side code',severity:'HIGH',test:s=>/(password|passwd|pwd)\\s*[:=]\\s*["'][^"']+["']/i.test(s),why:'Secrets placed in browser JavaScript can be discovered by anyone who can view source or developer tools.',fix:'Never store real passwords, API keys or tokens in frontend code. Verify credentials on a trusted server.'},
+{id:'CLIENT_AUTH',title:'Client-side authentication decision',severity:'HIGH',test:s=>/if\\s*\\(\\s*user(name)?\\s*===|if\\s*\\(.*password.*===/i.test(s),why:'A browser can be modified by the user, so it cannot be trusted to enforce authentication.',fix:'Move authentication and authorization decisions to a server-side component.'},
+{id:'DEMO_WARNING',title:'Training/demo credential disclosure',severity:'MEDIUM',test:s=>/training-only|demo password|demo-password/i.test(s),why:'Anything shipped to the browser is potentially visible to the user.',fix:'Keep training credentials fake and ensure they cannot grant access to real systems.'}
 ];
+async function get(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error('Could not load '+path);return r.text()}
 async function run(){
- const status=document.getElementById('status'), out=document.getElementById('results');
- status.textContent='Scanning…'; out.innerHTML='';
- try{
-  const r=await fetch('index.html',{cache:'no-store'}); if(!r.ok) throw new Error('Could not load index.html');
-  const html=await r.text(); let found=[];
-  for(const c of checks) if(c.test(html)) found.push(c);
-  status.innerHTML='<span class="ok">Scan complete</span>';
-  out.innerHTML=`<h2>${found.length} finding(s)</h2><p>Target: <code>index.html</code> · Scope: local lab only</p>` + found.map(f=>`<div class="finding ${f.severity.toLowerCase()}"><span class="tag">${f.severity}</span><b>${f.title}</b><p><b>Why it matters:</b> ${f.why}</p><p><b>Recommended fix:</b> ${f.fix}</p><small>ID: ${f.id}</small></div>`).join('') + `<details><summary>Show scanned source</summary><pre>${html.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</pre></details>`;
- }catch(e){status.innerHTML='<span class="error">Scan failed</span>';out.innerHTML='<p class="error">'+e.message+'</p><p>Make sure scanner.html and index.html are in the same folder.</p>';}
+const status=document.getElementById('status'),out=document.getElementById('results');status.textContent='Scanning…';out.innerHTML='';
+try{
+const [vulnerable,secure]=await Promise.all([get('index.html'),get('secure-login.html')]);
+const found=checks.filter(c=>c.test(vulnerable));
+const secureFindings=checks.filter(c=>c.test(secure));
+status.innerHTML='<span class="ok">Scan complete</span>';
+out.innerHTML=`<h2>${found.length} finding(s) in Lab 01</h2><p>Target: <code>index.html</code> · Scope: local lab only</p>`+
+found.map(f=>`<div class="finding ${f.severity.toLowerCase()}"><span class="tag">${f.severity}</span><b>${f.title}</b><p><b>Why it matters:</b> ${f.why}</p><p><b>Recommended fix:</b> ${f.fix}</p><small>ID: ${f.id}</small></div>`).join('')+
+`<h2>Secure version check</h2>`+(secureFindings.length===0?'<div class="finding pass"><span class="tag">PASS</span><b>No known lab patterns detected.</b><p>The secure example avoids the three patterns this training scanner checks.</p></div>':secureFindings.map(f=>`<div class="finding ${f.severity.toLowerCase()}"><span class="tag">${f.severity}</span><b>${f.title}</b></div>`).join(''))+
+`<p><b>Lesson:</b> fixing a finding means changing the architecture, not merely hiding the code.</p>`;
+}catch(e){status.innerHTML='<span class="error">Scan failed</span>';out.innerHTML='<p class="error">'+e.message+'</p><p>Make sure all lab files are in the same folder.</p>'}
 }
 document.getElementById('scan').addEventListener('click',run);
 </script>
