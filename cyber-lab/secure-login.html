@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cybersecurity Lab — Secure Login</title>
-<style>body{font-family:system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;line-height:1.5;background:#081018;color:#e8f1f7}.card{background:#101b25;border:1px solid #29404d;border-radius:12px;padding:24px;margin:18px 0}input{padding:9px;margin-top:5px}button{padding:10px 16px;cursor:pointer}.ok{color:#8ff0b0}.muted{color:#9bb0bb}a{color:#8ed8ff}</style>
+<style>body{font-family:system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;line-height:1.5;background:#081018;color:#e8f1f7}.card{background:#101b25;border:1px solid #29404d;border-radius:12px;padding:24px;margin:18px 0}input{padding:9px;margin-top:5px;width:min(100%,320px)}button{padding:10px 16px;cursor:pointer}.ok{color:#8ff0b0}.bad{color:#ff8f8f}.muted{color:#9bb0bb}a{color:#8ed8ff}pre{white-space:pre-wrap;background:#071018;padding:12px;border-radius:8px}</style>
 </head>
 <body>
 <h1>🔐 Secure Login Architecture Lab</h1>
-<p class="muted">This page demonstrates the frontend side of a safer design. It intentionally does not perform real authentication.</p>
+<p class="muted">This page now talks to the local training API. Never enter real credentials.</p>
 <div class="card">
 <h2>Login UI</h2>
 <form id="loginForm">
@@ -16,25 +16,55 @@
 <button>Sign in</button>
 </form>
 <p id="result"></p>
+<button id="meBtn" type="button">Check session</button>
+<button id="logoutBtn" type="button">Log out</button>
+<pre id="session"></pre>
 </div>
 <div class="card">
-<h2>What changed?</h2>
+<h2>What is happening?</h2>
 <ul>
-<li>No username or password is hardcoded in this page.</li>
-<li>The browser does not decide whether credentials are correct.</li>
-<li>A real application would send credentials over HTTPS to a trusted backend.</li>
-<li>The backend would verify a securely stored password hash and return a controlled authentication result.</li>
-<li>Authorization must also be enforced by the backend, not just hidden UI elements.</li>
+<li>The browser sends the username and password to <code>/api/login</code>.</li>
+<li>The backend verifies the password against a salted PBKDF2 hash.</li>
+<li>The backend returns a temporary token after successful authentication.</li>
+<li>The token is kept only in this page's memory for the lab.</li>
+<li>The <code>/api/me</code> endpoint checks that token before returning the authenticated user.</li>
+<li>Successful and failed logins are written to the security event log.</li>
 </ul>
-<p><strong>Important:</strong> This is still a static training page. It is not a production authentication system.</p>
+<p><strong>Training account:</strong> <code>lab-admin</code> / <code>training-only</code></p>
+<p class="muted">The API must be running on your computer at http://127.0.0.1:5000. This is a lab, not production authentication.</p>
 <p><a href="scanner.html">Run the vulnerability scanner</a> · <a href="dashboard.html">Command Center</a></p>
 </div>
 <script>
-document.getElementById('loginForm').addEventListener('submit',function(e){
+const API='http://127.0.0.1:5000/api';
+let authToken=null;
+const result=document.getElementById('result');
+const session=document.getElementById('session');
+
+async function login(e){
  e.preventDefault();
- document.getElementById('result').className='ok';
- document.getElementById('result').textContent='Frontend accepted the form for demonstration. No credential verification occurs in the browser.';
-});
+ result.className='muted'; result.textContent='Sending credentials to the local backend...';
+ try{
+  const response=await fetch(API+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('username').value,password:document.getElementById('password').value})});
+  const data=await response.json();
+  if(!response.ok){authToken=null;result.className='bad';result.textContent=data.error||'Login failed';return;}
+  authToken=data.token;
+  result.className='ok'; result.textContent='Login successful. Temporary session token received.';
+  await checkSession();
+ }catch(err){result.className='bad';result.textContent='Backend unavailable. Start the local Flask API first.';}
+}
+
+async function checkSession(){
+ if(!authToken){session.textContent='No active session.';return;}
+ try{
+  const response=await fetch(API+'/me',{headers:{Authorization:'Bearer '+authToken}});
+  const data=await response.json();
+  session.textContent=response.ok?'Authenticated user: '+data.user.username+'\nRole: '+data.user.role:'Session invalid or expired.';
+ }catch(err){session.textContent='Could not reach the backend.';}
+}
+
+document.getElementById('loginForm').addEventListener('submit',login);
+document.getElementById('meBtn').addEventListener('click',checkSession);
+document.getElementById('logoutBtn').addEventListener('click',()=>{authToken=null;session.textContent='Logged out. Token removed from browser memory.';result.className='muted';result.textContent='Session ended.';});
 </script>
 </body>
 </html>
