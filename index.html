@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#16351f" />
+  <title>My Farm — Cattle Manager</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">MY FARM</div>
+      <h1>Cattle Manager</h1>
+    </div>
+    <button class="primary" id="quickAdd">+ Add cattle</button>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <span class="pill">Farm control centre</span>
+        <h2>Know your herd at a glance.</h2>
+        <p>Start by registering the cattle you already have, even if their age and weight are unknown.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="primary" id="registerBtn">Register animal</button>
+        <button class="secondary" id="exportBtn">Export records</button>
+      </div>
+    </section>
+
+    <section class="stats" id="stats"></section>
+
+    <section class="grid-2">
+      <div class="card">
+        <div class="section-head"><h3>Herd</h3><button class="link" id="showAll">View all</button></div>
+        <div id="herdList" class="animal-list"></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h3>Quick actions</h3></div>
+        <div class="quick-grid">
+          <button class="action" data-action="animal">🐄<span>Register animal</span></button>
+          <button class="action" data-action="weight">⚖️<span>Record weight</span></button>
+          <button class="action" data-action="health">💉<span>Health record</span></button>
+          <button class="action" data-action="expense">💰<span>Add expense</span></button>
+          <button class="action" data-action="task">📋<span>Add task</span></button>
+          <button class="action" data-action="caretaker">👷<span>Daily log</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head"><h3>Farm tasks</h3><button class="link" id="addTask">+ Task</button></div>
+      <div id="taskList" class="task-list"></div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card">
+        <div class="section-head"><h3>Recent activity</h3></div>
+        <div id="activityList" class="activity-list"></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h3>Financial snapshot</h3></div>
+        <div class="finance" id="finance"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="animalDialog">
+    <form method="dialog" id="animalForm" class="modal">
+      <div class="section-head"><h3>Register animal</h3><button type="button" class="icon-btn" data-close>×</button></div>
+      <p class="muted">Use a temporary ID if the animal has no ear tag.</p>
+      <label>Animal ID<input name="id" required placeholder="BULL-001" /></label>
+      <div class="form-grid">
+        <label>Type<select name="type"><option>Bull</option><option>Cow</option><option>Heifer</option><option>Calf</option></select></label>
+        <label>Breed<input name="breed" placeholder="Nguni / Bosmara / Unknown" /></label>
+      </div>
+      <div class="form-grid">
+        <label>Estimated age (months)<input name="age" type="number" min="0" placeholder="Unknown" /></label>
+        <label>Weight (kg)<input name="weight" type="number" min="0" placeholder="Unknown" /></label>
+      </div>
+      <label>Colour / markings<textarea name="markings" rows="2" placeholder="Brown, white face, etc."></textarea></label>
+      <label>Notes<textarea name="notes" rows="2" placeholder="Anything useful about this animal"></textarea></label>
+      <div class="modal-actions"><button type="button" class="secondary" data-close>Cancel</button><button class="primary">Save animal</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="taskDialog">
+    <form method="dialog" id="taskForm" class="modal">
+      <div class="section-head"><h3>Add farm task</h3><button type="button" class="icon-btn" data-close>×</button></div>
+      <label>Task<input name="task" required placeholder="Check water tank" /></label>
+      <label>Due date<input name="due" type="date" /></label>
+      <div class="modal-actions"><button type="button" class="secondary" data-close>Cancel</button><button class="primary">Add task</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="recordDialog">
+    <form method="dialog" id="recordForm" class="modal">
+      <div class="section-head"><h3 id="recordTitle">Add record</h3><button type="button" class="icon-btn" data-close>×</button></div>
+      <input type="hidden" name="recordType" />
+      <label>Animal ID<input name="animalId" required placeholder="BULL-001" /></label>
+      <label id="valueLabel">Details<textarea name="value" rows="3" required placeholder="Enter details"></textarea></label>
+      <label>Cost (R)<input name="cost" type="number" min="0" step="0.01" placeholder="0" /></label>
+      <div class="modal-actions"><button type="button" class="secondary" data-close>Cancel</button><button class="primary">Save record</button></div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
